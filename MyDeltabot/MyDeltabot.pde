@@ -1,3 +1,7 @@
+/*Samuel Whitby
+Arch1391
+Deltabot
+*/
 
 #include <Servo.h> 
  
@@ -11,10 +15,16 @@ Servo servo3;
 
 float xPos = 0;
 float yPos = 0;
-float zPos = 230;
+float zPos = -230;
 
 int count = 1;
- 
+int potpin = 0;
+int flexval;
+int flexheight;
+
+char Axis;
+int value;
+
 float s1_theta;
 float s2_theta;
 float s3_theta;
@@ -23,18 +33,24 @@ float old_T2;
 float old_T3;
 float threshold = 3.0;
 
-float c_c_x, c_c_y, c_x, c_y, c_r, c_a; //circle
-
 int result;
 
+/*
+Inverse Kinematics and Forward Kinematics CODE FROM
+http://forums.trossenrobotics.com/tutorials/introduction-129/delta-robot-kinematics-3276/
+by mzavatsky
+*/
+
 // robot geometry
- // (look at pics above for explanation)
+// (look at pics above for explanation
+// mzavatsky
 const float e = 40.0;     // end effector
 const float f = 130.0;     // base
 const float re = 230.5;
-const float rf = 40.0;
+const float rf = 60.0;
  
  // trigonometric constants
+ // mzavatsky
 const float sqrt3 = sqrt(3.0);
 const float pi = 3.141592653;    // PI
 const float sin120 = sqrt3/2.0;   
@@ -45,6 +61,7 @@ const float tan30 = 1/sqrt3;
  
  // forward kinematics: (theta1, theta2, theta3) -> (x0, y0, z0)
  // returned status: 0=OK, -1=non-existing position
+ // mzavatsky
  int delta_calcForward(float theta1, float theta2, float theta3, float &x0, float &y0, float &z0) {
      float t = (f-e)*tan30/2;
      float dtr = pi/(float)180.0;
@@ -95,6 +112,7 @@ const float tan30 = 1/sqrt3;
  
  // inverse kinematics
  // helper functions, calculates angle theta1 (for YZ-pane)
+ // mzavatsky
  int delta_calcAngleYZ(float x0, float y0, float z0, float &theta) {
      float y1 = -0.5 * 0.57735 * f; // f/2 * tg 30
      y0 -= 0.5 * 0.57735    * e;    // shift center to edge
@@ -112,6 +130,7 @@ const float tan30 = 1/sqrt3;
  
  // inverse kinematics: (x0, y0, z0) -> (theta1, theta2, theta3)
  // returned status: 0=OK, -1=non-existing position
+ // mzavatsky
  int delta_calcInverse(float x0, float y0, float z0, float &theta1, float &theta2, float &theta3) {
      theta1 = theta2 = theta3 = 0;
      int status = delta_calcAngleYZ(x0, y0, z0, theta1);
@@ -124,25 +143,41 @@ const float tan30 = 1/sqrt3;
 
 void setup() 
 { 
+  xPos = 0;
+  yPos = 0;
+  zPos = 200;
   servo1.attach(2);
   servo2.attach(4);
   servo3.attach(6);  
   Serial.begin(9600);
-  c_r = 50;
-  c_c_x = 0;
-  c_c_y = 0;
-} 
- 
- 
+}
+
+// Serialprint and Servo Control CODE by prutsers.wordpress.com
 void loop()
 {
   
-  c_a = count;
-  c_x = c_c_x + c_r * cos(c_a);
-  c_y = c_c_y + c_r * sin(c_a);
-  
-  xPos = c_x;
-  yPos = c_y;
+  if ( Serial.available()) {
+  char ch = Serial.read();
+  switch(ch) {
+    case 'X':
+      Axis='X';
+      break;
+    case 'Y':
+      Axis='Y';
+      break;
+    case '0' ... '9':
+    value = map(ch*10, 300, 600, 10, 100);
+      if (Axis=='X')
+      {
+        xPos += value;
+      }
+      else if (Axis=='Y')
+      {
+        yPos += value;
+      }
+      break;
+  }
+  }
   
   result = delta_calcInverse(xPos, yPos, zPos, s1_theta, s2_theta, s3_theta);
  
@@ -182,6 +217,5 @@ void loop()
     }
   delay(250);
   }
-  count += 1;
-  if (count >360) count = 0; 
+  delay(250);
 }
